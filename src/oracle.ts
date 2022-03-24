@@ -2,9 +2,9 @@ import { BigNumber, ethers } from "ethers";
 import axios from "axios";
 
 const OWNER_PRIVATE_KEY =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-const LIBRARY_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const ORACLE_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+  "0xabc123abc123abc123abc123abc123abc123abc123abc123abc123abc123abc1";
+const LIBRARY_ADDRESS = "0x41e366cb923DbFA0ab7E245716c79d5774c221a7";
+const ORACLE_ADDRESS = "0x427a0d47Ed3a5a141B1aeaA3DcEE65662a9E3fEB";
 
 const libraryAbi = require("./abi/libraries/SafeDecimalMath.sol/SafeDecimalMath.json");
 const oracleAbi = require("./abi/Oracle.sol/Oracle.json");
@@ -21,12 +21,16 @@ const sleep = (s: number) => {
 };
 
 async function main() {
-  const provider = ethers.getDefaultProvider("http://localhost:8545");
+  const provider = ethers.getDefaultProvider(
+    "https://eth-rinkeby.alchemyapi.io/v2/8OdMrjYv_wSVs5OmWiH_CAACPHfJkz0B"
+  );
   const oracle = new ethers.Contract(ORACLE_ADDRESS, oracleAbi, provider);
   const library = new ethers.Contract(LIBRARY_ADDRESS, libraryAbi, provider);
   const decimals: number = await library.decimals();
   const unit: BigNumber = await library.UNIT();
   const signer = new ethers.Wallet(OWNER_PRIVATE_KEY).connect(provider);
+
+  await oracle.connect(signer).setPriceStalePeriod(BigNumber.from(60 * 60));
 
   const slugs: Array<string> = Array.from(SlugNameMap.keys());
 
