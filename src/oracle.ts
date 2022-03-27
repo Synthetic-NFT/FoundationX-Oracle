@@ -1,6 +1,6 @@
 import { BigNumber, ethers } from "ethers";
 import axios from "axios";
-import StatsD from "hot-shots";
+import { StatsD } from "node-statsd";
 
 const OWNER_PRIVATE_KEY =
   "0xe06640cb1cf178c39e4d8d9edf8e3f966eba2118d0c3815ed95c40925183ac0e";
@@ -9,6 +9,8 @@ const ORACLE_ADDRESS = "0xBC44Ad3A66ed13c5fA2357f0Dc976c1BB99EDe65";
 
 const libraryAbi = require("./abi/libraries/SafeDecimalMath.sol/SafeDecimalMath.json");
 const oracleAbi = require("./abi/Oracle.sol/Oracle.json");
+
+const statsd = new StatsD();
 
 const SlugNameMap = new Map<string, string>([
   ["boredapeyachtclub", "BoredApeYachtClub"],
@@ -21,13 +23,24 @@ const sleep = (s: number) => {
   });
 };
 
-const processing = async (
+const asyncTimer = async <TargetOut>(metricName: string, targetFunc: ((...args: any[]) => Promise<TargetOut>), ...args: any[]): Promise<TargetOut> => {
+  const startTime = Date.now();
+  try {
+    const res = await targetFunc(...args);
+    return res;
+  } finally {
+    const elapsedTime = Date.now() - startTime;
+    statsd.timing(metricName, elapsedTime);
+  }
+};
+
+async function processing(
   oracle: ethers.Contract,
   library: ethers.Contract,
   decimals: number,
   slugs: string[],
   signer: ethers.Wallet
-) => {
+): Promise<void> {
   let responses: Array<any> = [];
   try {
     responses = await axios.all(
@@ -77,7 +90,6 @@ const processing = async (
 };
 
 async function main() {
-  const statsd = new StatsD({ port: 8125 });
   const provider = ethers.getDefaultProvider(
     "https://eth-rinkeby.alchemyapi.io/v2/8OdMrjYv_wSVs5OmWiH_CAACPHfJkz0B"
   );
@@ -93,13 +105,12 @@ async function main() {
   await setStaleTx.wait();
 
   const slugs: Array<string> = Array.from(SlugNameMap.keys());
-  const processing_timed = statsd.asyncTimer(
-    () => processing(oracle, library, decimals, slugs, signer),
-    "processing_exec_time"
-  );
 
   while (true) {
-    await processing_timed();
+    await asyncTimer(
+      "processing_exec_time",
+      processing, oracle, library, decimals, slugs, signer
+    );
     await sleep(60 * 60);
   }
 }
