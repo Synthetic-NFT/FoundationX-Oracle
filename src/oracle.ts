@@ -3,9 +3,9 @@ import axios from "axios";
 import StatsD from "hot-shots";
 
 const OWNER_PRIVATE_KEY =
-  "0xabc123abc123abc123abc123abc123abc123abc123abc123abc123abc123abc1";
-const LIBRARY_ADDRESS = "0x41e366cb923DbFA0ab7E245716c79d5774c221a7";
-const ORACLE_ADDRESS = "0x427a0d47Ed3a5a141B1aeaA3DcEE65662a9E3fEB";
+  "0xe06640cb1cf178c39e4d8d9edf8e3f966eba2118d0c3815ed95c40925183ac0e";
+const LIBRARY_ADDRESS = "0x721899fcd67F9cCF6764b9CeF41fD39764c76C00";
+const ORACLE_ADDRESS = "0xBC44Ad3A66ed13c5fA2357f0Dc976c1BB99EDe65";
 
 const libraryAbi = require("./abi/libraries/SafeDecimalMath.sol/SafeDecimalMath.json");
 const oracleAbi = require("./abi/Oracle.sol/Oracle.json");
@@ -21,7 +21,13 @@ const sleep = (s: number) => {
   });
 };
 
-const processing = async (oracle: ethers.Contract, library: ethers.Contract, decimals: number, slugs: string[], signer: ethers.Wallet) => {
+const processing = async (
+  oracle: ethers.Contract,
+  library: ethers.Contract,
+  decimals: number,
+  slugs: string[],
+  signer: ethers.Wallet
+) => {
   let responses: Array<any> = [];
   try {
     responses = await axios.all(
@@ -51,13 +57,14 @@ const processing = async (oracle: ethers.Contract, library: ethers.Contract, dec
       )
     );
   }
-  await oracle
+  const updateTx = await oracle
     .connect(signer)
     .updatePrices(
       assets,
       prices,
       BigNumber.from(Math.round(Date.now() / 1000))
     );
+  await updateTx.wait();
   console.log(SlugNameMap.values());
   for (const asset of SlugNameMap.values()) {
     console.log(
@@ -81,10 +88,16 @@ async function main() {
   const unit: BigNumber = await library.UNIT();
   const signer = new ethers.Wallet(OWNER_PRIVATE_KEY).connect(provider);
 
-  await oracle.connect(signer).setPriceStalePeriod(BigNumber.from(60 * 60));
+  const setStaleTx = await oracle
+    .connect(signer)
+    .setPriceStalePeriod(BigNumber.from(60 * 60));
+  await setStaleTx.wait();
 
   const slugs: Array<string> = Array.from(SlugNameMap.keys());
-  const processing_timed = statsd.asyncTimer(() => processing(oracle, library, decimals, slugs, signer), 'processing_exec_time');
+  const processing_timed = statsd.asyncTimer(
+    () => processing(oracle, library, decimals, slugs, signer),
+    "processing_exec_time"
+  );
 
   while (true) {
     await processing_timed();
