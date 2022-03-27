@@ -65,7 +65,6 @@ const processing = async (
       BigNumber.from(Math.round(Date.now() / 1000))
     );
   await updateTx.wait();
-  console.log(SlugNameMap.values());
   for (const asset of SlugNameMap.values()) {
     console.log(
       asset,
