@@ -3,9 +3,9 @@ import axios from "axios";
 import { StatsD } from "node-statsd";
 
 const OWNER_PRIVATE_KEY =
-  "0xe06640cb1cf178c39e4d8d9edf8e3f966eba2118d0c3815ed95c40925183ac0e";
-const LIBRARY_ADDRESS = "0x721899fcd67F9cCF6764b9CeF41fD39764c76C00";
-const ORACLE_ADDRESS = "0xBC44Ad3A66ed13c5fA2357f0Dc976c1BB99EDe65";
+  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const LIBRARY_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+const ORACLE_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
 
 const libraryAbi = require("./abi/libraries/SafeDecimalMath.sol/SafeDecimalMath.json");
 const oracleAbi = require("./abi/Oracle.sol/Oracle.json");
@@ -14,7 +14,8 @@ const statsd = new StatsD();
 
 const SlugNameMap = new Map<string, string>([
   ["boredapeyachtclub", "BoredApeYachtClub"],
-  ["cryptopunks", "CryptoPunks"],
+  ["mutant-ape-yacht-club", "MutantApeYachtClub"],
+  ["otherdeed", "Otherdeed"],
 ]);
 
 const sleep = (s: number) => {
@@ -23,7 +24,11 @@ const sleep = (s: number) => {
   });
 };
 
-const asyncTimer = async <TargetOut>(metricName: string, targetFunc: ((...args: any[]) => Promise<TargetOut>), ...args: any[]): Promise<TargetOut> => {
+const asyncTimer = async <TargetOut>(
+  metricName: string,
+  targetFunc: (...args: any[]) => Promise<TargetOut>,
+  ...args: any[]
+): Promise<TargetOut> => {
   const startTime = Date.now();
   try {
     const res = await targetFunc(...args);
@@ -87,16 +92,13 @@ async function processing(
       )
     );
   }
-};
+}
 
 async function main() {
-  const provider = ethers.getDefaultProvider(
-    "https://eth-rinkeby.alchemyapi.io/v2/8OdMrjYv_wSVs5OmWiH_CAACPHfJkz0B"
-  );
+  const provider = ethers.getDefaultProvider("http://127.0.0.1:8545/");
   const oracle = new ethers.Contract(ORACLE_ADDRESS, oracleAbi, provider);
   const library = new ethers.Contract(LIBRARY_ADDRESS, libraryAbi, provider);
   const decimals: number = await library.decimals();
-  const unit: BigNumber = await library.UNIT();
   const signer = new ethers.Wallet(OWNER_PRIVATE_KEY).connect(provider);
 
   const setStaleTx = await oracle
@@ -109,7 +111,12 @@ async function main() {
   while (true) {
     await asyncTimer(
       "processing_exec_time",
-      processing, oracle, library, decimals, slugs, signer
+      processing,
+      oracle,
+      library,
+      decimals,
+      slugs,
+      signer
     );
     await sleep(60 * 60);
   }
