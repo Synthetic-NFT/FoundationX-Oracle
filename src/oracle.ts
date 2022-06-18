@@ -5,7 +5,7 @@ import { StatsD } from "node-statsd";
 const OWNER_PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 const LIBRARY_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-const ORACLE_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+const ORACLE_ADDRESS = "0x884aa8b9613Ee02F2538417349c9e6cC4201E8fA";
 
 const libraryAbi = require("./abi/libraries/SafeDecimalMath.sol/SafeDecimalMath.json");
 const oracleAbi = require("./abi/Oracle.sol/Oracle.json");
